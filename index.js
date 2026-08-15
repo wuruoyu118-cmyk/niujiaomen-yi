@@ -1,11 +1,11 @@
 
 // ============================================================
-// 牛角门·忆 v0.1.5 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
+// 牛角门·忆 v0.1.6 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
 // ============================================================
 import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
 
-const VER = '0.1.5';
+const VER = '0.1.6';
 const MOD = 'niujiaomen_yi';
 const INJ_KEY = 'niujiaomen_yi_inject';
 
@@ -56,7 +56,10 @@ function parseLines(text, st, {replace=false}={}){
                       : st;
   let n = 0;
   for(let raw of String(text).split('\n')){
-    const line = raw.trim();
+    let line = raw.trim()
+      .replace(/【/g,'[').replace(/】/g,']')
+      .replace(/＃/g,'#').replace(/（/g,'(').replace(/）/g,')')
+      .replace(/^([事波账卡早])[：:]/,'$1');
     if(!line || line==='无') continue;
     let m;
     if((m = line.match(/^事\s*#?(\d+)\s*\[([^\]]*)\]\s*(.+)$/))){
@@ -135,7 +138,7 @@ function buildInjection(){
   return out;
 }
 function applyInjection(){
-  // v0.1.5：注入改走 CHAT_COMPLETION_PROMPT_READY（插在提示词绝对末尾，与旧表格插件同位）
+  // v0.1.6：注入改走 CHAT_COMPLETION_PROMPT_READY（插在提示词绝对末尾，与旧表格插件同位）
   // 这里只负责清空旧通道，防止残留
   try{ getContext().setExtensionPrompt(INJ_KEY, '', 1, 0, false, 0); }catch(e){}
 }
@@ -256,6 +259,8 @@ function panelHtml(){
     <div class="menu_button" id="yi_btn_refresh">刷新</div>
     <div class="menu_button" id="yi_btn_save">保存修改</div>
   </div>
+  <h4>最近收到的记忆块（模型原文，只读）</h4>
+  <textarea id="yi_lastmemo" class="yi_small" readonly></textarea>
   <h4>档案（可直接编辑，行文法：卡[..] 早 事#..[..] 波#..[..] 账[..]）</h4>
   <textarea id="yi_dump" spellcheck="false"></textarea>
   <h4>设置</h4>
@@ -280,6 +285,10 @@ function refreshPanel(){
   if(el) el.textContent = `v${VER}｜当前第 ${last} 楼｜上次重构记到第 ${st.lastMark} 楼｜事${st.events.length} 波${st.waves.length} 账${Object.values(st.minds).reduce((a,b)=>a+b.length,0)}｜最后回复:${blk}`;
   const d = document.getElementById('yi_dump');
   if(d && document.activeElement!==d) d.value = serialize(st);
+  const lm = document.getElementById('yi_lastmemo');
+  if(lm) lm.value = (lastAI && lastAI.extra && lastAI.extra.yiMemo !== undefined)
+      ? lastAI.extra.yiMemo + (lastAI.extra.yiDone ? '\n\n[已入账]' : '\n\n[待入账：发送下一条消息时写入档案]')
+      : '（最后一条回复里没有收到块）';
 }
 function mountUI(){
   if(document.getElementById('yi_top_button')) return;
