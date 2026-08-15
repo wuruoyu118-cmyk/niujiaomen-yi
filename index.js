@@ -1,11 +1,11 @@
 
 // ============================================================
-// 牛角门·忆 v0.1.4 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
+// 牛角门·忆 v0.1.5 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
 // ============================================================
 import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
 
-const VER = '0.1.4';
+const VER = '0.1.5';
 const MOD = 'niujiaomen_yi';
 const INJ_KEY = 'niujiaomen_yi_inject';
 
@@ -135,7 +135,7 @@ function buildInjection(){
   return out;
 }
 function applyInjection(){
-  // v0.1.4：注入改走 CHAT_COMPLETION_PROMPT_READY（插在提示词绝对末尾，与旧表格插件同位）
+  // v0.1.5：注入改走 CHAT_COMPLETION_PROMPT_READY（插在提示词绝对末尾，与旧表格插件同位）
   // 这里只负责清空旧通道，防止残留
   try{ getContext().setExtensionPrompt(INJ_KEY, '', 1, 0, false, 0); }catch(e){}
 }
@@ -151,6 +151,7 @@ function onPromptReady(eventData){
     const d = Number(s.depth) || 0;
     if(d <= 0) eventData.chat.push(msg);                       // 0 = 压轴（默认）
     else eventData.chat.splice(Math.max(0, eventData.chat.length - d), 0, msg);
+    toastr.info('忆：注入✓');
   }catch(e){ console.error('[忆] prompt注入失败', e); }
 }
 
@@ -340,8 +341,16 @@ jQuery(async () => {
   try{
     mountUI();
     applyInjection();
-    if(event_types.CHAT_COMPLETION_PROMPT_READY)
+    if(event_types.CHAT_COMPLETION_PROMPT_READY){
       eventSource.on(event_types.CHAT_COMPLETION_PROMPT_READY, onPromptReady);
+    } else {
+      toastr.error('忆：本 ST 版本没有注入事件，改走兜底通道');
+      // 兜底：老通道 IN_CHAT 深度0
+      const fb = ()=>{ try{ const st=settings(); getContext().setExtensionPrompt(INJ_KEY, st.enabled?buildInjection():'', 1, 0, false, 0);}catch(e){} };
+      eventSource.on(event_types.MESSAGE_SENT, fb);
+      eventSource.on(event_types.CHAT_CHANGED, fb);
+      fb();
+    }
     eventSource.on(event_types.MESSAGE_RECEIVED, onReceived);
     eventSource.on(event_types.MESSAGE_SENT, onSent);
     eventSource.on(event_types.CHAT_CHANGED, onChanged);
