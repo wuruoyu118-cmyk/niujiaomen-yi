@@ -1,6 +1,6 @@
 
 // ============================================================
-// 牛角门·忆 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
+// 牛角门·忆 v0.1.2 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
 // ============================================================
 import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
@@ -153,7 +153,11 @@ function harvest(mesId){
   const text = m.mes || '';
   let memo = null, match, re = new RegExp(BLOCK_RE.source,'g');
   while((match = re.exec(text)) !== null) memo = match[1];
-  if(memo === null) return;
+  if(memo === null){
+    if(settings().enabled) toastr.warning('忆：本回合回复里没有记忆块');
+    return;
+  }
+  toastr.info('忆：已收到记忆块' + (memo.trim()==='无' ? '（无新内容）' : ''));
   m.mes = text.replace(new RegExp(BLOCK_RE.source,'g'), '').trimEnd();
   if(!m.extra) m.extra = {};
   m.extra.yiMemo = memo.trim();
@@ -176,7 +180,7 @@ function commitPending(){
       m.extra.yiDone = true;
       prune(st); saveMeta();
       try{ ctx.saveChat?.(); }catch(e){}
-      if(n>0) toastr.info(`忆：入账 ${n} 条`);
+      toastr.info(n>0 ? `忆：入账 ${n} 条` : '忆：本回合无新条目');
     }
     break; // 只看最后一条AI消息
   }
@@ -258,7 +262,10 @@ function refreshPanel(){
   const ctx = getContext();
   const last = (ctx.chat||[]).length-1;
   const el = document.getElementById('yi_stat');
-  if(el) el.textContent = `当前第 ${last} 楼｜上次重构记到第 ${st.lastMark} 楼｜事${st.events.length} 波${st.waves.length} 账${Object.values(st.minds).reduce((a,b)=>a+b.length,0)}`;
+  let lastAI = null;
+  for(let i=(ctx.chat||[]).length-1;i>=0;i--){ const m=ctx.chat[i]; if(m&&!m.is_user&&!m.is_system){ lastAI=m; break; } }
+  const blk = lastAI ? (lastAI.extra&&lastAI.extra.yiMemo!==undefined ? '有块' : '无块') : '—';
+  if(el) el.textContent = `当前第 ${last} 楼｜上次重构记到第 ${st.lastMark} 楼｜事${st.events.length} 波${st.waves.length} 账${Object.values(st.minds).reduce((a,b)=>a+b.length,0)}｜最后回复:${blk}`;
   const d = document.getElementById('yi_dump');
   if(d && document.activeElement!==d) d.value = serialize(st);
 }
