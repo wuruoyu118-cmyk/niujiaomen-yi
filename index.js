@@ -1,11 +1,11 @@
 
 // ============================================================
-// 牛角门·忆 v0.1.6 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
+// 牛角门·忆 v0.1.7 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
 // ============================================================
 import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
 
-const VER = '0.1.6';
+const VER = '0.1.7';
 const MOD = 'niujiaomen_yi';
 const INJ_KEY = 'niujiaomen_yi_inject';
 
@@ -79,6 +79,9 @@ function parseLines(text, st, {replace=false}={}){
     }
   }
   if(replace){ st.hc=out.hc; st.events=out.events; st.waves=out.waves; st.minds=out.minds; st.early=out.early; }
+  // 入账后按楼层号排序，楼层相同按入账先后；prune 依赖"第一条最老"，这里必须保证
+  st.events.sort((a,b)=>(a.turn-b.turn)||(a.id-b.id));
+  st.waves.sort((a,b)=>(a.turn-b.turn)||(a.id-b.id));
   return n;
 }
 function prune(st){
