@@ -1,10 +1,11 @@
 
 // ============================================================
-// 牛角门·忆 v0.1.3 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
+// 牛角门·忆 v0.1.4 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
 // ============================================================
 import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
 
+const VER = '0.1.4';
 const MOD = 'niujiaomen_yi';
 const INJ_KEY = 'niujiaomen_yi_inject';
 
@@ -134,7 +135,7 @@ function buildInjection(){
   return out;
 }
 function applyInjection(){
-  // v0.1.3：注入改走 CHAT_COMPLETION_PROMPT_READY（插在提示词绝对末尾，与旧表格插件同位）
+  // v0.1.4：注入改走 CHAT_COMPLETION_PROMPT_READY（插在提示词绝对末尾，与旧表格插件同位）
   // 这里只负责清空旧通道，防止残留
   try{ getContext().setExtensionPrompt(INJ_KEY, '', 1, 0, false, 0); }catch(e){}
 }
@@ -275,7 +276,7 @@ function refreshPanel(){
   let lastAI = null;
   for(let i=(ctx.chat||[]).length-1;i>=0;i--){ const m=ctx.chat[i]; if(m&&!m.is_user&&!m.is_system){ lastAI=m; break; } }
   const blk = lastAI ? (lastAI.extra&&lastAI.extra.yiMemo!==undefined ? '有块' : '无块') : '—';
-  if(el) el.textContent = `当前第 ${last} 楼｜上次重构记到第 ${st.lastMark} 楼｜事${st.events.length} 波${st.waves.length} 账${Object.values(st.minds).reduce((a,b)=>a+b.length,0)}｜最后回复:${blk}`;
+  if(el) el.textContent = `v${VER}｜当前第 ${last} 楼｜上次重构记到第 ${st.lastMark} 楼｜事${st.events.length} 波${st.waves.length} 账${Object.values(st.minds).reduce((a,b)=>a+b.length,0)}｜最后回复:${blk}`;
   const d = document.getElementById('yi_dump');
   if(d && document.activeElement!==d) d.value = serialize(st);
 }
@@ -346,6 +347,6 @@ jQuery(async () => {
     eventSource.on(event_types.CHAT_CHANGED, onChanged);
     if(event_types.MESSAGE_SWIPED) eventSource.on(event_types.MESSAGE_SWIPED, onSwiped);
     if(event_types.MESSAGE_EDITED) eventSource.on(event_types.MESSAGE_EDITED, onEdited);
-    console.log('[牛角门·忆] 已加载');
+    console.log('[牛角门·忆] 已加载 v'+VER);
   }catch(e){ console.error('[牛角门·忆] 加载失败', e); }
 });
