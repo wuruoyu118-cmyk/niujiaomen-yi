@@ -1,0 +1,10 @@
+
+#yi_panel{max-width:520px;padding:12px 14px;font-size:.92em;line-height:1.6}
+#yi_panel .yi_row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+#yi_panel .yi_stat{opacity:.75;font-size:.85em;margin-bottom:4px}
+#yi_panel textarea{width:100%;min-height:180px;font-family:monospace;font-size:.85em;line-height:1.5}
+#yi_panel .yi_small{min-height:90px}
+#yi_panel .menu_button{padding:3px 10px}
+#yi_panel h4{margin:10px 0 4px;opacity:.85}
+#yi_panel label{display:flex;align-items:center;gap:6px;font-size:.88em}
+#yi_panel input[type=number]{width:70px}
