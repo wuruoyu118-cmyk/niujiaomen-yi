@@ -1,6 +1,6 @@
 
 // ============================================================
-// 牛角门·忆 v0.1.2 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
+// 牛角门·忆 v0.1.3 —— 自建记忆扩展（顺带记录 + 延迟入账 + 实体检索）
 // ============================================================
 import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
@@ -23,7 +23,7 @@ function settings(){
   if(!extension_settings[MOD]) extension_settings[MOD] = {};
   const s = extension_settings[MOD];
   if(s.enabled===undefined) s.enabled = true;
-  if(s.depth===undefined) s.depth = 3;
+  if(s.depth===undefined || s._v13===undefined){ s.depth = 0; s._v13 = 1; }
   if(s.budget===undefined) s.budget = 1800;
   if(s.instr===undefined) s.instr = DEFAULT_INSTR;
   return s;
@@ -134,13 +134,23 @@ function buildInjection(){
   return out;
 }
 function applyInjection(){
-  const s = settings();
-  const ctx = getContext();
+  // v0.1.3：注入改走 CHAT_COMPLETION_PROMPT_READY（插在提示词绝对末尾，与旧表格插件同位）
+  // 这里只负责清空旧通道，防止残留
+  try{ getContext().setExtensionPrompt(INJ_KEY, '', 1, 0, false, 0); }catch(e){}
+}
+function onPromptReady(eventData){
   try{
-    const val = s.enabled ? buildInjection() : '';
-    // setExtensionPrompt(key, value, position(1=IN_CHAT), depth, scan, role(0=system))
-    ctx.setExtensionPrompt(INJ_KEY, val, 1, s.depth, false, 0);
-  }catch(e){ console.error('[忆] 注入失败', e); }
+    const s = settings();
+    if(!s.enabled) return;
+    if(!eventData || eventData.dryRun) return;
+    if(!Array.isArray(eventData.chat)) return;
+    const val = buildInjection();
+    if(!val) return;
+    const msg = { role:'system', content: val };
+    const d = Number(s.depth) || 0;
+    if(d <= 0) eventData.chat.push(msg);                       // 0 = 压轴（默认）
+    else eventData.chat.splice(Math.max(0, eventData.chat.length - d), 0, msg);
+  }catch(e){ console.error('[忆] prompt注入失败', e); }
 }
 
 // ---------------- 顺带记录：收块（收到AI回复时剥离暂存） ----------------
@@ -329,6 +339,8 @@ jQuery(async () => {
   try{
     mountUI();
     applyInjection();
+    if(event_types.CHAT_COMPLETION_PROMPT_READY)
+      eventSource.on(event_types.CHAT_COMPLETION_PROMPT_READY, onPromptReady);
     eventSource.on(event_types.MESSAGE_RECEIVED, onReceived);
     eventSource.on(event_types.MESSAGE_SENT, onSent);
     eventSource.on(event_types.CHAT_CHANGED, onChanged);
